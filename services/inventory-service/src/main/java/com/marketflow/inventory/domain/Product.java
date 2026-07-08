@@ -115,13 +115,33 @@ public class Product {
         touch();
     }
 
+    public void addStock(int quantity) {
+        validatePositiveQuantity(quantity);
+        quantityOnHand += quantity;
+        touch();
+    }
+
+    public void removeStock(int quantity) {
+        validatePositiveQuantity(quantity);
+        adjustStock(-quantity);
+    }
+
     public void adjustStock(int delta) {
+        if (delta == 0) {
+            throw new IllegalArgumentException("Stock adjustment delta cannot be zero");
+        }
         int nextQuantityOnHand = quantityOnHand + delta;
         if (nextQuantityOnHand < quantityReserved) {
             throw new IllegalArgumentException("Adjustment would make stock lower than reserved quantity");
         }
         quantityOnHand = nextQuantityOnHand;
         touch();
+    }
+
+    private void validatePositiveQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero");
+        }
     }
 
     private void touch() {

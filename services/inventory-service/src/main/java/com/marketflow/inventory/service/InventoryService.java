@@ -2,6 +2,8 @@ package com.marketflow.inventory.service;
 
 import com.marketflow.inventory.domain.Product;
 import com.marketflow.inventory.domain.ReservationStatus;
+import com.marketflow.inventory.domain.StockMovement;
+import com.marketflow.inventory.domain.StockMovementType;
 import com.marketflow.inventory.domain.StockReservation;
 import com.marketflow.inventory.event.EventEnvelope;
 import com.marketflow.inventory.event.EventType;
@@ -14,6 +16,7 @@ import com.marketflow.inventory.event.dto.StockReservedPayload;
 import com.marketflow.inventory.event.publisher.EventPublisher;
 import com.marketflow.inventory.exception.ProductNotFoundException;
 import com.marketflow.inventory.repository.ProductRepository;
+import com.marketflow.inventory.repository.StockMovementRepository;
 import com.marketflow.inventory.repository.StockReservationRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -28,15 +31,18 @@ public class InventoryService {
     private final ProductRepository productRepository;
     private final StockReservationRepository reservationRepository;
     private final EventPublisher eventPublisher;
+    private final StockMovementRepository movementRepository;
 
     public InventoryService(
             ProductRepository productRepository,
             StockReservationRepository reservationRepository,
-            EventPublisher eventPublisher
+            EventPublisher eventPublisher,
+            StockMovementRepository movementRepository
     ) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.eventPublisher = eventPublisher;
+        this.movementRepository = movementRepository;
     }
 
     @Transactional
@@ -55,6 +61,12 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<Product> listProducts() {
         return productRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockMovement> listStockMovements(UUID productId) {
+        getProduct(productId);
+        return movementRepository.findByProductIdOrderByCreatedAtDesc(productId);
     }
 
     @Transactional
@@ -141,11 +153,55 @@ public class InventoryService {
     }
 
     @Transactional
+    public Product addStock(UUID productId, int quantity, String reason) {
+        return moveStock(productId, StockMovementType.STOCK_IN, quantity, reason);
+    }
+
+    @Transactional
+    public Product removeStock(UUID productId, int quantity, String reason) {
+        return moveStock(productId, StockMovementType.STOCK_OUT, quantity, reason);
+    }
+
+    @Transactional
     public Product adjustStock(UUID productId, int delta) {
+        if (delta == 0) {
+            throw new IllegalArgumentException("Stock adjustment delta cannot be zero");
+        }
+        if (delta == Integer.MIN_VALUE) {
+            throw new IllegalArgumentException("Stock adjustment delta is too small");
+        }
+        StockMovementType type = delta > 0 ? StockMovementType.STOCK_IN : StockMovementType.STOCK_OUT;
+        int quantity = delta > 0 ? delta : -delta;
+        return moveStock(productId, type, quantity, "Manual stock adjustment");
+    }
+
+    private Product moveStock(UUID productId, StockMovementType type, int quantity, String reason) {
         Product product = productRepository.findByIdForUpdate(productId).orElseThrow(() -> new ProductNotFoundException(productId));
-        product.adjustStock(delta);
+        int previousQuantityOnHand = product.getQuantityOnHand();
+
+        if (type == StockMovementType.STOCK_IN) {
+            product.addStock(quantity);
+        } else {
+            product.removeStock(quantity);
+        }
+
+        movementRepository.save(new StockMovement(
+                product,
+                type,
+                quantity,
+                previousQuantityOnHand,
+                product.getQuantityOnHand(),
+                normalizeReason(reason)
+        ));
         checkLowStock(productId.toString(), UUID.randomUUID().toString(), product);
         return product;
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return "Not informed";
+        }
+        return reason.trim();
     }
 
     private void releaseCreatedReservations(List<StockReservation> reservations) {
