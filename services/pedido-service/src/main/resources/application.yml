@@ -1,0 +1,38 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: pedido-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pedido_db}
+    username: ${SPRING_DATASOURCE_USERNAME:marketflow}
+    password: ${SPRING_DATASOURCE_PASSWORD:marketflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+
+aws:
+  endpoint: ${AWS_ENDPOINT:http://localhost:4566}
+  region: ${AWS_REGION:us-east-1}
+  sns:
+    saga-topic-arn: ${SAGA_TOPIC_ARN:arn:aws:sns:us-east-1:000000000000:saga-events-topic}
+  sqs:
+    pedido-queue-url: ${PEDIDO_QUEUE_URL:http://localhost:4566/000000000000/pedido-service-queue}
+    poll-interval-ms: ${SQS_POLL_INTERVAL_MS:2000}
+
+outbox:
+  poll-interval-ms: ${OUTBOX_POLL_INTERVAL_MS:2000}
+  batch-size: ${OUTBOX_BATCH_SIZE:10}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
