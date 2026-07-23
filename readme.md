@@ -1,4 +1,4 @@
-PROJETO SAGA AWS
+## PROJETO SAGA AWS
 
 Este repositório é um projeto de estudo e demonstração de uma arquitetura baseada em microsserviços com comunicação assíncrona via eventos. A ideia é simular um fluxo de vendas de supermercado, onde uma compra gera uma cadeia de ações entre diferentes serviços, com compensação em caso de falha.
 
