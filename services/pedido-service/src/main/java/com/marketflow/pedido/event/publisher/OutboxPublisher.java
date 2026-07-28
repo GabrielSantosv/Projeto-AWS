@@ -2,66 +2,65 @@ package com.marketflow.pedido.event.publisher;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketflow.pedido.domain.OutboxEvent;
-import com.marketflow.pedido.domain.Pedido;
-import com.marketflow.pedido.event.EnvelopeEvento;
 import com.marketflow.pedido.repository.OutboxEventRepository;
-import com.marketflow.pedido.repository.PedidoRepository;
 import com.marketflow.pedido.service.PedidoService;
 
 @Component
 public class OutboxPublisher {
 
+    private static final Logger log = LoggerFactory.getLogger(OutboxPublisher.class);
+
     private final OutboxEventRepository outboxEventRepository;
-    private final PedidoRepository pedidoRepository;
-    private final PublicadorEventos publicadorEventos;
+    private final PublicadorBroker publicadorBroker;
     private final PedidoService pedidoService;
-    private final ObjectMapper objectMapper;
+
+    @Value("${outbox.batch-size:10}")
+    private int batchSize;
+
+    @Value("${outbox.polling-enabled:true}")
+    private boolean pollingEnabled;
 
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
-            PedidoRepository pedidoRepository,
-            PublicadorEventos publicadorEventos,
-            PedidoService pedidoService,
-            ObjectMapper objectMapper
+            PublicadorBroker publicadorBroker,
+            PedidoService pedidoService
     ) {
         this.outboxEventRepository = outboxEventRepository;
-        this.pedidoRepository = pedidoRepository;
-        this.publicadorEventos = publicadorEventos;
+        this.publicadorBroker = publicadorBroker;
         this.pedidoService = pedidoService;
-        this.objectMapper = objectMapper;
     }
 
     @Scheduled(fixedDelayString = "${outbox.poll-interval-ms}")
     @Transactional
-    public void publicarPendentes() {
-        List<OutboxEvent> pendentes = outboxEventRepository.findPendentesForUpdate(Pageable.ofSize(10));
-        for (OutboxEvent evento : pendentes) {
-            EnvelopeEvento<?> envelope = lerEnvelope(evento);
-            publicadorEventos.publicar(envelope);
-            evento.marcarPublicado();
-            outboxEventRepository.save(evento);
-            Pedido pedido = pedidoRepository.findById(java.util.UUID.fromString(envelope.sagaId())).orElse(null);
-            if (pedido != null) {
-                pedidoService.marcarProcessandoAposPublicacaoSemTransacao(envelope.sagaId());
-            }
+    public void poll() {
+        if (pollingEnabled) {
+            publicarPendentes();
         }
     }
 
-    private EnvelopeEvento<?> lerEnvelope(OutboxEvent evento) {
+    @Transactional
+    public void publicarPendentes() {
+        List<OutboxEvent> pendentes = outboxEventRepository.findPendentesForUpdate(Pageable.ofSize(batchSize));
+        pendentes.forEach(this::publicarNoBroker);
+    }
+
+    private void publicarNoBroker(OutboxEvent evento) {
         try {
-            return objectMapper.readValue(evento.getPayloadJson(), new TypeReference<EnvelopeEvento<Object>>() {
-            });
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Nao foi possivel ler envelope do outbox", ex);
+            publicadorBroker.publicar(evento);
+            pedidoService.marcarProcessandoAposPublicacaoSemTransacao(evento.getSagaId());
+            evento.marcarPublicado();
+            outboxEventRepository.save(evento);
+        } catch (RuntimeException exception) {
+            log.warn("Falha ao publicar evento {} no SNS; permanecera no outbox.", evento.getEventoId(), exception);
         }
     }
 }

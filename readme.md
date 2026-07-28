@@ -1,234 +1,172 @@
-# MarketFlow
+# MarketFlow Saga
 
-Este repositório é um projeto de estudo e demonstração de uma arquitetura baseada em microsserviços com comunicação assíncrona via eventos. A ideia é simular um fluxo de vendas de supermercado, onde uma compra gera uma cadeia de ações entre diferentes serviços, com compensação em caso de falha.
+Backend de portfólio que simula o atendimento de um supermercado com sete microsserviços independentes, banco por serviço e uma SAGA por coreografia. Não existe frontend nem um orquestrador central: os serviços reagem aos eventos do seu próprio domínio usando SNS/SQS compatíveis com AWS, executados localmente pelo Floci.
 
-## Proposta do projeto
+## Por que este projeto existe
 
-O MarketFlow mostra, na prática, como funciona uma arquitetura orientada a eventos com padrão SAGA, onde:
+A primeira modelagem era uma cadeia HTTP síncrona. Ela apresentava três problemas de negócio e operação:
 
-- um pedido é criado no serviço de pedidos;
-- o estoque é reservado em um serviço dedicado;
-- a nota fiscal é emitida em outro serviço;
-- em caso de problema, ações compensatórias são executadas para evitar inconsistências.
+- acoplamento temporal: cada serviço esperava a resposta do anterior;
+- falha em cascata: a indisponibilidade de uma etapa interrompia toda a venda;
+- escala explosiva: em picos como Black Friday, escalar horizontalmente apenas adiava o colapso da cadeia.
 
-A proposta principal é demonstrar conceitos como:
+A solução adotada foi uma arquitetura orientada a eventos com SAGA por coreografia. Quando o pagamento é confirmado, estoque, fiscal e notificações recebem `PedidoCriado` em paralelo. Cada consumidor persiste sua própria decisão e pode continuar ou compensar o fluxo sem uma chamada REST entre os serviços da venda.
 
-- microsserviços independentes;
-- comunicação via SNS/SQS;
-- outbox pattern;
-- idempotência no processamento de eventos;
-- compensação de falhas em fluxo distribuído.
+## Arquitetura
 
----
-
-## Arquitetura geral
-
-O projeto foi pensado em camadas de domínio e comunicação:
-
-1. Pedido é criado.
-2. Um evento de pedido é publicado.
-3. Os serviços interessados consomem esse evento.
-4. Cada serviço executa sua regra de negócio e publica novos eventos, se necessário.
-5. Se alguma etapa falhar, a saga é compensada.
-
-Em termos práticos, o fluxo de exemplo é:
-
-- criar pedido;
-- confirmar pagamento;
-- reservar estoque;
-- emitir nota fiscal;
-- em caso de estoque insuficiente, cancelar a operação e compensar o que já foi feito.
-
----
-
-## Tecnologias utilizadas
-
-- Java 21
-- Spring Boot 3.3.2
-- Spring Data JPA
-- PostgreSQL
-- Flyway
-- AWS SDK v2 para SNS/SQS
-- LocalStack/Floci para simular AWS localmente
-- JUnit 5 e Mockito
-
----
-
-## Estrutura do repositório
-
-- infra/floci: scripts para preparar o ambiente local com SNS, SQS e filas.
-- services/estoque-service: serviço de estoque com API em português.
-- services/inventory-service: serviço de estoque com implementação complementar em inglês.
-- services/pedido-service: serviço responsável pelo ciclo de vida dos pedidos.
-- services/fiscal-service: serviço responsável por emissão e cancelamento de notas fiscais.
-
----
-
-## Como executar localmente
-
-### 1. Pré-requisitos
-
-- Java 21
-- Maven
-- Docker
-- PostgreSQL rodando localmente
-- Ambiente AWS local com Floci/LocalStack
-
-### 2. Preparar o ambiente local
-
-No diretório raiz:
-
-```bash
-cd infra/floci
-./init-aws.sh
+```mermaid
+graph LR
+    P[pedido-service] -- PedidoCriado --> E[estoque-service]
+    P -- PedidoCriado --> F[fiscal-service]
+    P -- PedidoCriado --> N[notificacao-service]
+    E -- EstoqueAtualizado --> S[supplier-service]
+    E -- EstoqueInsuficiente --> P
+    E -- EstoqueInsuficiente --> F
+    F -- NotaEmitida --> X[expedicao-service]
+    F -- NotaEmitida / NotaCancelada --> N
+    X -- SeparacaoPedidoIniciado --> N
+    S -- OrdemCompraGerada --> A[(auditoria / futuro)]
+    U[funcionario-service] -. login e validação REST .-> P
 ```
 
-### 3. Rodar os serviços
+`expedicao-service` começa a separação somente após `NotaEmitida`. `funcionario-service` é propositalmente síncrono e não publica nem consome eventos; autenticação de operador é request/response, não uma etapa da saga.
 
-Exemplo para o serviço de pedido:
+### Garantias de consistência
+
+- Cada serviço possui seu próprio PostgreSQL e suas migrations Flyway.
+- Eventos usam o envelope `eventId`, `eventType`, `sagaId`, `correlationId`, `timestamp`, `version` e `payload`.
+- Consumidores registram `eventId` em `eventos_processados` na mesma transação da regra de negócio.
+- Serviços que emitem eventos gravam primeiro em `outbox_events` com propagação transacional `MANDATORY`.
+- Um poller separado publica pendências no SNS com o atributo `eventType`; falhas permanecem no outbox para retry.
+- Filas SQS possuem DLQ e só são excluídas após processamento bem-sucedido.
+- O estoque ordena locks pessimistas múltiplos e desfaz reservas parciais antes de emitir compensação.
+- O fiscal tolera `PedidoCriado` e `EstoqueInsuficiente` fora de ordem por meio de `pedidos_cancelados`.
+
+## Catálogo de eventos
+
+| Evento | Publicado por | Consumido por |
+|---|---|---|
+| `PedidoCriado` | pedido-service | estoque-service, fiscal-service, notificacao-service |
+| `EstoqueAtualizado` | estoque-service | supplier-service |
+| `EstoqueInsuficiente` | estoque-service | pedido-service, fiscal-service |
+| `NotaEmitida` | fiscal-service | expedicao-service, notificacao-service |
+| `NotaCancelada` | fiscal-service | notificacao-service |
+| `SeparacaoPedidoIniciado` | expedicao-service | notificacao-service |
+| `OrdemCompraGerada` | supplier-service | auditoria/futuro |
+
+## Serviços
+
+| Serviço | Porta | Banco | Responsabilidade e endpoints principais |
+|---|---:|---|---|
+| pedido-service | 8081 | `pedido_db` | cria pedidos, confirma pagamento, compensa falta de estoque; `POST /pedidos`, `POST /pedidos/{id}/confirmar-pagamento`, `GET /pedidos/{id}` |
+| estoque-service | 8082 | `estoque_db` | produtos, saldo e reservas; `POST /produtos`, `GET /produtos`, `POST /produtos/{id}/estoque-ajustes` |
+| fiscal-service | 8083 | `fiscal_db` | emite e cancela notas; `GET /notas-fiscais`, `GET /notas-fiscais/{pedidoId}` |
+| notificacao-service | 8084 | `notificacao_db` | histórico terminal de notificações; `GET /notificacoes/{pedidoId}` |
+| expedicao-service | 8085 | `expedicao_db` | inicia separação após nota emitida; `GET /separacoes/{pedidoId}` |
+| funcionario-service | 8086 | `funcionario_db` | login e validação de sessão; `POST /auth/login`, `GET /auth/validar` |
+| supplier-service | 8087 | `fornecedores_db` | cadastro de fornecedores e ordem por estoque baixo; CRUD em `/fornecedores` |
+
+A interface OpenAPI de cada serviço fica em `/swagger-ui/index.html`.
+
+## Infraestrutura local
+
+O `docker-compose.yml` sobe:
+
+- Floci `1.5.11-compat` na porta 4566;
+- um PostgreSQL 16 isolado para cada microsserviço;
+- os sete serviços Java em imagens multi-stage (Maven no build e JRE 21 Alpine no runtime);
+- volumes persistentes, rede interna e health checks dos bancos/Floci.
+
+O script `infra/floci/init-aws.sh` cria `saga-events-topic`, uma fila e uma DLQ por consumidor e as subscriptions com filtro por `eventType`. `funcionario-service` não recebe fila. O `inventory-service` em inglês é legado, está fora do Compose e não participa da arquitetura final; sua remoção do repositório depende de confirmação explícita do proprietário.
+
+### Subir tudo
+
+Pré-requisitos: Docker com Compose v2. Nenhum token do LocalStack é necessário.
 
 ```bash
-cd services/pedido-service
-mvn spring-boot:run
+docker compose up --build
 ```
 
-Os demais serviços seguem a mesma lógica:
+Para acompanhar apenas os serviços de aplicação:
 
 ```bash
-cd services/estoque-service
-mvn spring-boot:run
+docker compose logs -f pedido-service estoque-service fiscal-service notificacao-service expedicao-service funcionario-service supplier-service
 ```
+
+Para encerrar preservando os volumes:
 
 ```bash
-cd services/inventory-service
-mvn spring-boot:run
+docker compose down
 ```
+
+Use `docker compose down -v` somente quando quiser apagar deliberadamente os bancos e o estado local do Floci.
+
+## Contrato de autenticação do caixa
+
+O funcionário é cadastrado administrativamente no banco/API e deve estar ativo, com cargo permitido, para abrir uma sessão.
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "matricula": "CX-1001",
+  "senha": "segredo"
+}
+```
+
+Resposta autorizada:
+
+```json
+{
+  "token": "token-opaco-gerado-pelo-servidor",
+  "expiraEm": "2026-07-28T22:00:00Z"
+}
+```
+
+Validação consumível futuramente pelo `ValidadorSessaoCaixa` real do pedido:
+
+```http
+GET /auth/validar?token=token-opaco-gerado-pelo-servidor
+```
+
+```json
+{
+  "valido": true,
+  "funcionarioId": "4d5d0e67-536e-4a23-bccb-757e4c5fef30",
+  "expiraEm": "2026-07-28T22:00:00Z"
+}
+```
+
+A implementação usa token opaco aleatório. Apenas o hash do token e da senha é persistido; uma sessão expirada ou inativa retorna `valido: false`. Consulte também `services/funcionario-service/README.md` para detalhes do contrato.
+
+## Testes
+
+Cada módulo possui testes JUnit 5 e um `src/test/resources/application-test.yml` com H2, Flyway desabilitado e `ddl-auto: create-drop`. As migrations PostgreSQL continuam obrigatórias no perfil normal.
+
+**Rodada final:** 40 testes executados, 40 aprovados, 0 falhas, 0 erros e 0 ignorados.
+
+PowerShell:
+
+```powershell
+$services = 'pedido-service','estoque-service','fiscal-service','notificacao-service','expedicao-service','funcionario-service','supplier-service'
+foreach ($service in $services) {
+  Push-Location "services/$service"
+  mvn test
+  Pop-Location
+}
+```
+
+Bash:
 
 ```bash
-cd services/fiscal-service
-mvn spring-boot:run
+for service in pedido estoque fiscal notificacao expedicao funcionario supplier; do
+  (cd "services/${service}-service" && mvn test)
+done
 ```
 
-Os serviços usam configurações padrão com bancos separados, como:
+Os testes cobrem estado final, idempotência, conteúdo do outbox, publicação única, compensações fora de ordem e a regra de que expedição nunca consome `PedidoCriado`.
 
-- pedido_db
-- estoque_db
-- inventory_db
-- fiscal_db
+## Stack
 
-E o endpoint local da simulação AWS em:
-
-- http://localhost:4566
-
----
-
-## Como cada microserviço funciona
-
-### 1. pedido-service
-
-Responsável pelo ciclo de vida do pedido.
-
-Funções principais:
-
-- criar pedido;
-- confirmar pagamento;
-- publicar eventos da saga;
-- processar compensações quando o estoque é insuficiente;
-- manter o estado do pedido, como aguardando pagamento, pago, processando e cancelado.
-
-Esse serviço é o ponto de entrada do fluxo de negócio.
-
-### Endpoints principais
-
-- POST /pedidos
-- POST /pedidos/{id}/confirmar-pagamento
-- GET /pedidos/{id}
-
-### 2. estoque-service
-
-Responsável pelo controle de produtos e estoque.
-
-Funções principais:
-
-- criar produtos;
-- consultar produtos;
-- ajustar estoque;
-- controlar reservas e disponibilidade.
-
-Esse serviço representa a base operacional do inventário.
-
-### Endpoints principais
-
-- POST /produtos
-- GET /produtos
-- GET /produtos/{produtoId}
-- POST /produtos/{produtoId}/estoque-ajustes
-
-### 3. inventory-service
-
-É uma implementação complementar do mesmo domínio de estoque, com estrutura mais próxima de um modelo de referência em inglês.
-
-Funções principais:
-
-- cadastro de produtos;
-- ajustes de estoque;
-- consulta de saldo e reservas.
-
-Ele serve como uma segunda visão do mesmo problema, útil para comparar abordagens e evoluir a solução.
-
-### Endpoints principais
-
-- POST /products
-- GET /products
-- GET /products/{id}
-- POST /products/{id}/stock-adjustments
-
-### 4. fiscal-service
-
-Responsável por emitir e cancelar notas fiscais.
-
-Funções principais:
-
-- gerar nota fiscal quando o pedido é criado com sucesso;
-- cancelar a nota se o estoque for insuficiente;
-- registrar eventos já processados para garantir idempotência.
-
-Esse serviço mostra como uma etapa downstream pode reagir a eventos de negócio sem depender diretamente do pedido-service.
-
-### Endpoints principais
-
-- GET /notas-fiscais
-- GET /notas-fiscais/{pedidoId}
-
----
-
-## Fluxo de negócio em exemplo
-
-1. Um cliente cria um pedido no pedido-service.
-2. O pedido publica um evento de criação.
-3. O serviço de estoque reage e reserva a quantidade solicitada.
-4. O serviço fiscal reage e emite a nota fiscal.
-5. Se faltar estoque, um evento de compensação é disparado.
-6. O pedido é cancelado e a nota fiscal, se existir, é cancelada.
-
-Esse comportamento representa uma saga de compensação em execução.
-
----
-
-## Status atual
-
-O projeto já possui a base estrutural e funcional para demonstrar o fluxo principal com eventos, armazenamento local e testes unitários. A intenção é servir como referência para quem quer estudar:
-
-- microsserviços com Spring Boot;
-- comunicação assíncrona;
-- padrões de saga e outbox;
-- integração com serviços de fila e tópicos.
-
----
-
-## Próximos passos sugeridos
-
-- conectar mais serviços na mesma saga;
-- expandir o fluxo para notificações e expedição;
-- validar o comportamento com integração real contra SNS/SQS;
-- adicionar testes de integração mais completos.
+Java 21, Spring Boot 3.3.2, Spring Data JPA, PostgreSQL 16, Flyway, AWS SDK v2 para SNS/SQS, Floci, springdoc-openapi, JUnit 5, Mockito, AssertJ, H2 e Docker Compose.

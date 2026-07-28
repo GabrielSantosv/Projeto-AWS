@@ -1,0 +1,12 @@
+package com.marketflow.notificacao.event;
+
+public final class TipoEvento {
+
+    public static final String PEDIDO_CRIADO = "PedidoCriado";
+    public static final String NOTA_EMITIDA = "NotaEmitida";
+    public static final String NOTA_CANCELADA = "NotaCancelada";
+    public static final String SEPARACAO_PEDIDO_INICIADO = "SeparacaoPedidoIniciado";
+
+    private TipoEvento() {
+    }
+}

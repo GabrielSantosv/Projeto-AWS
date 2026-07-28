@@ -1,0 +1,11 @@
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\controller\AutenticacaoController.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\controller\AutenticacaoDtos.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\domain\Funcionario.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\domain\SessaoCaixa.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\exception\OperadorNaoAutorizadoException.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\FuncionarioServiceApplication.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\repository\FuncionarioRepository.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\repository\SessaoCaixaRepository.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\security\SenhaHash.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\security\TokenOpaco.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\funcionario-service\src\main\java\com\marketflow\funcionario\service\AutenticacaoService.java

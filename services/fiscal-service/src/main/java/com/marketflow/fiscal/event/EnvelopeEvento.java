@@ -24,4 +24,8 @@ public record EnvelopeEvento<T>(
                 payload
         );
     }
+
+    public <N> EnvelopeEvento<N> withPayload(N nextPayload) {
+        return new EnvelopeEvento<>(eventId, eventType, sagaId, correlationId, timestamp, version, nextPayload);
+    }
 }

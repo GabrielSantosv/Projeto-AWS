@@ -1,0 +1,16 @@
+com\marketflow\funcionario\domain\SessaoCaixa.class
+com\marketflow\funcionario\FuncionarioServiceApplication.class
+com\marketflow\funcionario\security\TokenOpaco.class
+com\marketflow\funcionario\domain\Funcionario.class
+com\marketflow\funcionario\controller\AutenticacaoController.class
+com\marketflow\funcionario\repository\SessaoCaixaRepository.class
+com\marketflow\funcionario\security\SenhaHash.class
+com\marketflow\funcionario\exception\OperadorNaoAutorizadoException.class
+com\marketflow\funcionario\service\AutenticacaoService.class
+com\marketflow\funcionario\service\AutenticacaoService$ResultadoLogin.class
+com\marketflow\funcionario\controller\AutenticacaoDtos$LoginResponse.class
+com\marketflow\funcionario\controller\AutenticacaoDtos.class
+com\marketflow\funcionario\controller\AutenticacaoDtos$ValidacaoResponse.class
+com\marketflow\funcionario\controller\AutenticacaoDtos$LoginRequest.class
+com\marketflow\funcionario\repository\FuncionarioRepository.class
+com\marketflow\funcionario\service\AutenticacaoService$ResultadoValidacao.class

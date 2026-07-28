@@ -21,7 +21,7 @@ import com.marketflow.pedido.event.TipoEvento;
 import com.marketflow.pedido.event.dto.EstoqueInsuficientePayload;
 import com.marketflow.pedido.event.dto.ItemPedidoDto;
 import com.marketflow.pedido.event.publisher.OutboxPublisher;
-import com.marketflow.pedido.event.publisher.PublicadorEventos;
+import com.marketflow.pedido.event.publisher.PublicadorBroker;
 import com.marketflow.pedido.exception.SessaoCaixaInvalidaException;
 import com.marketflow.pedido.repository.EventoProcessadoRepository;
 import com.marketflow.pedido.repository.OutboxEventRepository;
@@ -49,7 +49,7 @@ class PedidoServiceIntegrationTest {
     private OutboxPublisher outboxPublisher;
 
     @Autowired
-    private CountingPublicadorEventos publicadorEventos;
+    private CountingPublicadorBroker publicadorEventos;
 
     @Autowired
     private TestValidadorSessaoCaixa validadorSessaoCaixa;
@@ -227,13 +227,13 @@ class PedidoServiceIntegrationTest {
 
         @Bean
         @Primary
-        PublicadorEventos publicadorEventos(CountingPublicadorEventos countingPublicadorEventos) {
-            return countingPublicadorEventos;
+        PublicadorBroker publicadorBroker(CountingPublicadorBroker countingPublicadorBroker) {
+            return countingPublicadorBroker;
         }
 
         @Bean
-        CountingPublicadorEventos countingPublicadorEventos() {
-            return new CountingPublicadorEventos();
+        CountingPublicadorBroker countingPublicadorBroker() {
+            return new CountingPublicadorBroker();
         }
 
         @Bean(name = "validadorSessaoCaixa")
@@ -256,11 +256,15 @@ class PedidoServiceIntegrationTest {
         }
     }
 
-    static class CountingPublicadorEventos extends PublicadorEventos {
+    static class CountingPublicadorBroker extends PublicadorBroker {
         private int chamadas;
 
+        CountingPublicadorBroker() {
+            super(null);
+        }
+
         @Override
-        public void publicar(EnvelopeEvento<?> evento) {
+        public void publicar(OutboxEvent evento) {
             chamadas++;
         }
 

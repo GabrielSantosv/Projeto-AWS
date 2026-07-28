@@ -3,6 +3,7 @@ C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\jav
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\controller\NotaFiscalDtos.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\domain\EventoProcessado.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\domain\NotaFiscal.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\domain\OutboxEvent.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\domain\PedidoCancelado.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\domain\StatusNotaFiscal.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\dto\EstoqueInsuficientePayload.java
@@ -12,11 +13,14 @@ C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\jav
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\dto\PedidoCriadoPayload.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\EnvelopeEvento.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\listener\OuvinteEventosSaga.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\publisher\OutboxPublisher.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\publisher\PublicadorBroker.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\publisher\PublicadorEventos.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\event\TipoEvento.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\exception\NotaFiscalNaoEncontradaException.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\FiscalServiceApplication.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\repository\EventoProcessadoRepository.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\repository\NotaFiscalRepository.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\repository\OutboxEventRepository.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\repository\PedidoCanceladoRepository.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\fiscal-service\src\main\java\com\marketflow\fiscal\service\FiscalService.java

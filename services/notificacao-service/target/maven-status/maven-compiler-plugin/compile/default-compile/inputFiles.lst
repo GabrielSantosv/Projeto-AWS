@@ -1,0 +1,17 @@
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\config\AwsConfig.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\controller\NotificacaoController.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\controller\NotificacaoDtos.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\domain\EventoProcessado.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\domain\Notificacao.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\domain\StatusNotificacao.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\dto\NotaCanceladaPayload.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\dto\NotaEmitidaPayload.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\dto\PedidoCriadoPayload.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\dto\SeparacaoPedidoIniciadoPayload.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\EnvelopeEvento.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\listener\OuvinteEventosSaga.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\event\TipoEvento.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\NotificacaoServiceApplication.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\repository\EventoProcessadoRepository.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\repository\NotificacaoRepository.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\notificacao-service\src\main\java\com\marketflow\notificacao\service\NotificacaoService.java

@@ -1,0 +1,287 @@
+name: marketflow-saga
+
+services:
+  floci:
+    image: floci/floci:1.5.11-compat
+    environment:
+      FLOCI_HOSTNAME: floci
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_STORAGE_PERSISTENT_PATH: /var/lib/floci
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - floci-data:/var/lib/floci
+      - ./infra/floci/init-aws.sh:/etc/localstack/init/ready.d/10-marketflow.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [marketflow]
+
+  pedido-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pedido_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - pedido-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d pedido_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  estoque-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: estoque_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - estoque-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d estoque_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  fiscal-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fiscal_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - fiscal-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d fiscal_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  notificacao-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notificacao_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - notificacao-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d notificacao_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  expedicao-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: expedicao_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - expedicao-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d expedicao_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  funcionario-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: funcionario_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - funcionario-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d funcionario_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  supplier-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fornecedores_db
+      POSTGRES_USER: marketflow
+      POSTGRES_PASSWORD: marketflow
+    volumes:
+      - supplier-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketflow -d fornecedores_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [marketflow]
+
+  pedido-service:
+    build:
+      context: ./services/pedido-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pedido-db:5432/pedido_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+      AWS_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      PEDIDO_QUEUE_URL: http://floci:4566/000000000000/pedido-service-queue
+      SQS_POLLING_ENABLED: "true"
+      OUTBOX_POLLING_ENABLED: "true"
+    depends_on:
+      pedido-db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+    networks: [marketflow]
+
+  estoque-service:
+    build:
+      context: ./services/estoque-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://estoque-db:5432/estoque_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+      AWS_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      ESTOQUE_QUEUE_URL: http://floci:4566/000000000000/estoque-service-queue
+      SQS_POLLING_ENABLED: "true"
+    depends_on:
+      estoque-db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+    networks: [marketflow]
+
+  fiscal-service:
+    build:
+      context: ./services/fiscal-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fiscal-db:5432/fiscal_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+      AWS_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      FISCAL_QUEUE_URL: http://floci:4566/000000000000/fiscal-service-queue
+      SQS_POLLING_ENABLED: "true"
+      OUTBOX_POLLING_ENABLED: "true"
+    depends_on:
+      fiscal-db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+    networks: [marketflow]
+
+  notificacao-service:
+    build:
+      context: ./services/notificacao-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notificacao-db:5432/notificacao_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+      AWS_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      NOTIFICACAO_QUEUE_URL: http://floci:4566/000000000000/notificacao-service-queue
+      SQS_POLLING_ENABLED: "true"
+    depends_on:
+      notificacao-db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+    networks: [marketflow]
+
+  expedicao-service:
+    build:
+      context: ./services/expedicao-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://expedicao-db:5432/expedicao_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+      AWS_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      EXPEDICAO_QUEUE_URL: http://floci:4566/000000000000/expedicao-service-queue
+      SQS_POLLING_ENABLED: "true"
+      OUTBOX_POLLING_ENABLED: "true"
+    depends_on:
+      expedicao-db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+    networks: [marketflow]
+
+  funcionario-service:
+    build:
+      context: ./services/funcionario-service
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://funcionario-db:5432/funcionario_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+    depends_on:
+      funcionario-db:
+        condition: service_healthy
+    networks: [marketflow]
+
+  supplier-service:
+    build:
+      context: ./services/supplier-service
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://supplier-db:5432/fornecedores_db
+      SPRING_DATASOURCE_USERNAME: marketflow
+      SPRING_DATASOURCE_PASSWORD: marketflow
+      AWS_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      SUPPLIER_QUEUE_URL: http://floci:4566/000000000000/supplier-service-queue
+      SQS_POLLING_ENABLED: "true"
+      OUTBOX_POLLING_ENABLED: "true"
+    depends_on:
+      supplier-db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+    networks: [marketflow]
+
+networks:
+  marketflow:
+    driver: bridge
+
+volumes:
+  floci-data:
+  pedido-db-data:
+  estoque-db-data:
+  fiscal-db-data:
+  notificacao-db-data:
+  expedicao-db-data:
+  funcionario-db-data:
+  supplier-db-data:

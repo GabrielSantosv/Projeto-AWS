@@ -11,6 +11,7 @@ C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\jav
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\event\EnvelopeEvento.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\event\listener\OuvinteEventosSaga.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\event\publisher\OutboxPublisher.java
+C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\event\publisher\PublicadorBroker.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\event\publisher\PublicadorEventos.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\event\TipoEvento.java
 C:\Users\Darkz\Documents\GitHub\Projeto AWS\services\pedido-service\src\main\java\com\marketflow\pedido\exception\PedidoNaoEncontradoException.java

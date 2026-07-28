@@ -8,43 +8,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketflow.pedido.domain.EventoProcessado;
 import com.marketflow.pedido.domain.ItemPedido;
-import com.marketflow.pedido.domain.OutboxEvent;
 import com.marketflow.pedido.domain.Pedido;
 import com.marketflow.pedido.event.EnvelopeEvento;
 import com.marketflow.pedido.event.TipoEvento;
 import com.marketflow.pedido.event.dto.EstoqueInsuficientePayload;
 import com.marketflow.pedido.event.dto.ItemPedidoDto;
 import com.marketflow.pedido.event.dto.PedidoCriadoPayload;
+import com.marketflow.pedido.event.publisher.PublicadorEventos;
 import com.marketflow.pedido.exception.PedidoNaoEncontradoException;
 import com.marketflow.pedido.exception.SessaoCaixaInvalidaException;
 import com.marketflow.pedido.repository.EventoProcessadoRepository;
-import com.marketflow.pedido.repository.OutboxEventRepository;
 import com.marketflow.pedido.repository.PedidoRepository;
 
 @Service
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
-    private final OutboxEventRepository outboxEventRepository;
     private final EventoProcessadoRepository eventoProcessadoRepository;
-    private final ObjectMapper objectMapper;
+    private final PublicadorEventos publicadorEventos;
     private final ValidadorSessaoCaixa validadorSessaoCaixa;
 
     public PedidoService(
             PedidoRepository pedidoRepository,
-            OutboxEventRepository outboxEventRepository,
             EventoProcessadoRepository eventoProcessadoRepository,
-            ObjectMapper objectMapper,
+            PublicadorEventos publicadorEventos,
             ValidadorSessaoCaixa validadorSessaoCaixa
     ) {
         this.pedidoRepository = pedidoRepository;
-        this.outboxEventRepository = outboxEventRepository;
         this.eventoProcessadoRepository = eventoProcessadoRepository;
-        this.objectMapper = objectMapper;
+        this.publicadorEventos = publicadorEventos;
         this.validadorSessaoCaixa = validadorSessaoCaixa;
     }
 
@@ -97,7 +91,7 @@ public class PedidoService {
                 normalizarCorrelationId(correlationId),
                 toPedidoCriadoPayload(pedido)
         );
-        outboxEventRepository.save(toOutboxEvent(evento));
+        publicadorEventos.publicar(evento);
         return pedido;
     }
 
@@ -143,19 +137,6 @@ public class PedidoService {
 
     private ItemPedidoDto toItemPedidoDto(ItemPedido item) {
         return new ItemPedidoDto(item.getProdutoId(), item.getQuantidade());
-    }
-
-    private OutboxEvent toOutboxEvent(EnvelopeEvento<PedidoCriadoPayload> evento) {
-        try {
-            return new OutboxEvent(
-                    evento.eventId(),
-                    evento.eventType(),
-                    evento.sagaId(),
-                    objectMapper.writeValueAsString(evento)
-            );
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Nao foi possivel serializar evento PedidoCriado", exception);
-        }
     }
 
     private String normalizarCorrelationId(String correlationId) {
