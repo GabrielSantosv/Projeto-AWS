@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # MarketFlow Saga
+=======
+## PROJETO SAGA AWS
+>>>>>>> 8c7a09dc539718bc0d8a85c80f2bde486cb53d16
 
 Backend de portfólio que simula o atendimento de um supermercado com sete microsserviços independentes, banco por serviço e uma SAGA por coreografia. Não existe frontend nem um orquestrador central: os serviços reagem aos eventos do seu próprio domínio usando SNS/SQS compatíveis com AWS, executados localmente pelo Floci.
 
