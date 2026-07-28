@@ -1,8 +1,5 @@
-<<<<<<< HEAD
-# MarketFlow Saga
-=======
+
 ## PROJETO SAGA AWS
->>>>>>> 8c7a09dc539718bc0d8a85c80f2bde486cb53d16
 
 Backend de portfólio que simula o atendimento de um supermercado com sete microsserviços independentes, banco por serviço e uma SAGA por coreografia. Não existe frontend nem um orquestrador central: os serviços reagem aos eventos do seu próprio domínio usando SNS/SQS compatíveis com AWS, executados localmente pelo Floci.
 
@@ -69,8 +66,6 @@ graph LR
 | expedicao-service | 8085 | `expedicao_db` | inicia separação após nota emitida; `GET /separacoes/{pedidoId}` |
 | funcionario-service | 8086 | `funcionario_db` | login e validação de sessão; `POST /auth/login`, `GET /auth/validar` |
 | supplier-service | 8087 | `fornecedores_db` | cadastro de fornecedores e ordem por estoque baixo; CRUD em `/fornecedores` |
-
-A interface OpenAPI de cada serviço fica em `/swagger-ui/index.html`.
 
 ## Infraestrutura local
 
@@ -141,8 +136,6 @@ GET /auth/validar?token=token-opaco-gerado-pelo-servidor
   "expiraEm": "2026-07-28T22:00:00Z"
 }
 ```
-
-A implementação usa token opaco aleatório. Apenas o hash do token e da senha é persistido; uma sessão expirada ou inativa retorna `valido: false`. Consulte também `services/funcionario-service/README.md` para detalhes do contrato.
 
 ## Testes
 
